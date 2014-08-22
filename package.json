@@ -1,0 +1,12 @@
+{
+  "name": "hamlet",
+  "version": "0.0.0",
+  "dependencies": {
+    "acorn": "^0.7.0"
+  },
+  "devDependencies": {
+    "through": "^2.3.4",
+    "gulp-concat": "^2.3.4",
+    "gulp": "^3.8.7"
+  }
+}
