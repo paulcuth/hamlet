@@ -54,5 +54,7 @@ Please be aware that Hamlet is under heavy development and there are existing pl
 I'm happy to discuss the project with anyone who wants to get involved. Give me a shout at [@paulcuth](https://twitter.com/paulcuth).
 
 
+## License
+MIT
 
 
