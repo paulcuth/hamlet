@@ -109,6 +109,9 @@ function ToNumber (val)
 
 	elseif t == 'string' then
 		-- MASSIVE TODO
+		if val == '' then 
+			return 0 
+		end
 		return tonumber(val)
 	end
 
@@ -169,10 +172,13 @@ end
 
 
 
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-8.10.5
 function ToPropertyDescriptor (attributes)
 
 	-- 1
-	-- TODO needs Type(O)
+	if typeof(attributes) ~= 'object' then
+		throw(new(TypeError, 'Property description must be an object: '..ToString(attributes)))
+	end
 
 	-- 2
 	local value, flags, mask = nil, 0, 0
@@ -237,13 +243,58 @@ end
 
 
 
+function ToUint32 (val) 
+	-- 1
+	val = ToNumber(val)
+
+	-- 2
+	if val ~= val--[[NaN]] or val == 0 or val == Infinity or val == -Infinity then
+		return 0
+	end
+
+	-- 3, 4, 5	
+	local abs = math.abs(val)
+	return ((val / abs) * math.floor(abs)) % math.pow(2, 32)
+end
+
+
 
 
 -- Custom
+
+
 function isPrimitive(val)
 	local t = type(val)
 	return t ~= 'table' or t == null or t == undefined
 end
+
+
+
+do
+	local limit = math.pow(2, 32) - 1
+
+	function isArrayIndex (index)
+		local uint = ToUint32(index)
+		return ToString(uint) == index and uint ~= limit
+	end
+end
+
+
+
+
+-- [[ Internal objects ]]
+
+
+do
+	local ThrowTypeError = Function:new('ThrowTypeError', {}, function ()
+		throw(new(TypeError))
+	end)
+
+	defineProperty(ThrowTypeError, 'length', 0, 0)
+	_G.ThrowTypeError = ThrowTypeError
+end
+
+
 
 
 

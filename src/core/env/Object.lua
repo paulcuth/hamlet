@@ -67,7 +67,7 @@ do
 
 
 	-- http://www.ecma-international.org/ecma-262/5.1/#sec-15.2.4.2
-	defineProperty(prototype, 'toString', Function:new('toString', {}, function (this) 
+	local toString = Function:new('toString', {}, function (this) 
 
 		-- 1
 		if this == nil or this == undefined then
@@ -83,7 +83,9 @@ do
 
 		-- 5
 		return '[object ' + class + ']'
-	end))
+	end)
+
+	defineProperty(prototype, 'toString', toString)
 
 
 
@@ -176,7 +178,7 @@ do
 	defineProperty(global, 'Object', Object) 	-- External
 
 	Object_prototype = prototype 				-- For ease of reference in ObjectType:new
-
+	Object_prototype_toString = toString
 end
 
 

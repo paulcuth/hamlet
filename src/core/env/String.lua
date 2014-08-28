@@ -59,7 +59,7 @@ do
 	--[[ Prototype ]] 
 
 
-	local prototype = Object:new()	
+	local prototype = Object:new()
 
 	defineProperty(String, 'prototype', 0, prototype)
 	defineProperty(prototype, 'constructor', String)
@@ -67,8 +67,37 @@ do
 
 
 
+	defineProperty(prototype, 'length', 1, {Function:new('', {}, function (this)
+		if typeof(this) ~= 'string' then
+			throw(new(TypeError))
+		end
+
+		return #this
+	end)})
+
+
+
+
+	local function toString (self)
+		return self.primitiveValue
+	end
+
+	defineProperty(prototype, 'toString', Function:new('toString', {}, toString))
+	defineProperty(prototype, 'valueOf', Function:new('valueOf', {}, toString))
+	
+
+
+
 	--
 
 	defineProperty(global, 'String', String)
+
+
+	local mt = getmetatable('')
+	mt.__index = prototype
+
+	mt.__add = function (a, b)
+		return a..ToString(b)
+	end
 
 end

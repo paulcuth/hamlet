@@ -11,6 +11,21 @@ do
 
 
 
+
+
+	-- Call stack and argument management
+	local callStack = {}
+	local argumentsStack = {}
+
+	function getCallStack ()
+		return callStack
+	end
+
+	function getCurrentArguments ()
+		-- TODO: Should be Arguments object, not Array.
+		return new(Array, unpack(argumentsStack[1]))
+	end
+
 	-- Make Function objects invokable
 	Function.__call = function (t, ...)
 		return t:call(...)
@@ -37,7 +52,7 @@ do
 		if global ~= nil and global.get then
 			functionNamespace = global:get('Function')
 
-			if functionNamespace ~= nil and functionNamespace.get then
+			if functionNamespace ~= undefined and functionNamespace.get then
 				functionPrototype = functionNamespace:get('prototype')
 			end
 		end
@@ -118,8 +133,15 @@ do
 
 
 	-- http://www.ecma-international.org/ecma-262/5.1/#sec-13.2.1
-	function Function:call (...)
+	function Function:call (this, ...)
 		-- 1, 3, 4 NOOP Handled by Lua
+
+		-- Call stack
+		local insert = table.insert
+		local remove = table.remove
+
+		insert(callStack, 1, t)
+		insert(argumentsStack, 1, {...})
 
 		-- 2
 		local def = self.code
@@ -127,8 +149,13 @@ do
 			return
 		end
 
+		local result = def(this, ...)
+
+		remove(callStack, 1, 1)
+		remove(argumentsStack, 1, 1)
+
 		-- 5, 6
-		return def(...)
+		return result == nil and undefined or result
 	end
 
 

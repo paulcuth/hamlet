@@ -8,12 +8,35 @@ do
 
 	-- Primatives 
 
-	null = {}
-	undefined = {}
+	undefined = setmetatable({}, {
+		__index = function (t, key) 
+			throw(new(ReferenceError, 'Variable is not defined. Can\'t reference property "'..key..'" of undefined.'))
+		end,
+
+		__newindex = function (t, key) 
+			throw(new(ReferenceError, 'Variable is not defined. Can\'t set property "'..key..'" of undefined.'))
+		end
+	})
+
+	null = setmetatable({}, {
+		__index = function (t, key) 
+			throw(new(TypeError, 'Variable is null. Can\'t reference property "'..key..'" of null.'))
+		end,
+
+		__index = function (t, key) 
+			throw(new(TypeError, 'Variable is null. Can\'t set property "'..key..'" of null.'))
+		end
+	})
+
 	NaN = 0/0
 	Infinity = 1/0
 
 
+
+
+	-- Globals
+
+	callStack = {}
 
 
 
@@ -38,9 +61,10 @@ do
 			local name = val._name ~= '' and ': '..val._name or ''
 			return '[Function'..name..']'
 
-		else
-			-- TODO: Array
+		elseif instanceof(val, Array) then
+			return '[ '..val:get('join')(val, ', ')..' ]'
 
+		else
 			if val._propertyFlags == nil then
 				return '[native object]'
 			end
@@ -83,8 +107,6 @@ do
 
 
 
-
-
 	-- Runner
 	function execute(func) 
 		local env = {
@@ -95,6 +117,7 @@ do
 			__hamlet_type_Function = Function,
 			__hamlet_ToObject = ToObject,
 			__hamlet_ToNumber = ToNumber,
+			__hamlet_ToBoolean = ToBoolean,
 			__hamlet_new = new,
 			__hamlet_forIn = forIn,
 			__hamlet_delete = delete,
@@ -108,7 +131,8 @@ do
 			__hamlet_instanceof = instanceof,
 			__hamlet_pcall = pcall,
 			__hamlet_throw = throw,
-			__hamlet_getError = getError
+			__hamlet_getError = getError,
+			__hamlet_getArguments = getCurrentArguments
 		}
 
 		setmetatable(env, {

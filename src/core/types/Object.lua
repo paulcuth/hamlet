@@ -194,13 +194,13 @@ do
 
 
 	-- http://www.ecma-international.org/ecma-262/5.1/#sec-8.12.5
-	function Object:put (propertyName, newValue, throw)
+	function Object:put (propertyName, newValue, _throw)
 		propertyName = ToString(propertyName)
 
 		-- 1
 		if not self:canPut(propertyName) then
 			-- a
-			if throw then
+			if _throw then
 				throw(new(TypeError))
 			end
 
@@ -216,7 +216,7 @@ do
 		-- 3
 		if currentFlags ~= nil and band(currentFlags, 1--[[TYPE]]) == 0--[[DATA]] then
 			-- a, b
-			self:defineOwnProperty(propertyName, newValue, 0, 0, throw)
+			self:defineOwnProperty(propertyName, newValue, 0, 0, _throw)
 
 			-- c
 			return
@@ -238,7 +238,7 @@ do
 		end
 
 		-- 6
-		self:defineOwnProperty(propertyName, newValue, 14, 14, throw)	-- 2--[[WRITABLE]] + 4--[[ENUMERABLE]] + 8--[[CONFIGURABLE]]
+		self:defineOwnProperty(propertyName, newValue, 14, 14, _throw)	-- 2--[[WRITABLE]] + 4--[[ENUMERABLE]] + 8--[[CONFIGURABLE]]
 
 		-- 7
 		return
@@ -260,7 +260,7 @@ do
 
 
 	-- http://www.ecma-international.org/ecma-262/5.1/#sec-8.12.7
-	function Object:delete (propertyName, throw)
+	function Object:delete (propertyName, _throw)
 		-- 1
 		local _, flags = self:getOwnProperty(propertyName)
 
@@ -280,7 +280,7 @@ do
 		end
 
 		-- 4
-		if throw then
+		if _throw then
 			throw(new(TypeError))
 		end
 
@@ -391,7 +391,7 @@ do
 
 
 	-- http://www.ecma-international.org/ecma-262/5.1/#sec-8.12.9
-	function Object:defineOwnProperty (propertyName, newValue, newFlags, newFlagMask, throw)
+	function Object:defineOwnProperty (propertyName, newValue, newFlags, newFlagMask, _throw)
 		local band = bit.band
 
 		-- 1
@@ -402,7 +402,7 @@ do
 		-- 3
 		if currentFlags == nil then
 			if not self.extensible then
-				if throw then
+				if _throw then
 					throw(new(TypeError))
 				else
 					return false
@@ -441,7 +441,7 @@ do
 		if currentConfigurable == 0 then
 			-- a, b
 			if band(newFlags, 8--[[CONFIGURABLE]]) == 8 or band(currentFlags, 4--[[ENUMERABLE]]) ~= band(newFlags, 4--[[ENUMERABLE]]) then
-				if throw then
+				if _throw then
 					throw(new(TypeError))
 				else
 					return false
@@ -462,7 +462,7 @@ do
 
 				-- a
 				if currentConfigurable == 0 then
-					if throw then
+					if _throw then
 						throw(new(TypeError))
 					else
 						return false
@@ -485,7 +485,7 @@ do
 					-- i
 					if currentWritable == 0 then
 						if band(newFlags, 2--[[WRITABLE]]) == 2 then
-							if throw then
+							if _throw then
 								throw(new(TypeError))
 							else
 								return false
@@ -494,7 +494,7 @@ do
 
 						-- ii
 						if newValue ~= nil and not IsSameValue(newValue, currentValue) then
-							if throw then
+							if _throw then
 								throw(new(TypeError))
 							else
 								return false
@@ -520,7 +520,7 @@ do
 						-- ii
 						newGetter ~= nil and not IsSameValue(newGetter, currentValue[1--[[GETTER]]])
 					) then
-						if throw then
+						if _throw then
 							throw(new(TypeError))
 						else
 							return false

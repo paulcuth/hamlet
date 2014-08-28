@@ -22,14 +22,19 @@ function parse (code) {
 
 
 function parseProgram (node) {
-	var state = { locals: {} },
+	var state = { locals: {}, functions: [], functionNames: [] },
 		body = parseBlockStatement(node, state),
 		locals = state.locals,
+		functions = state.functions,
 		declarations = '',
 		i;
 
 	for (i in locals) {
 		declarations += 'local ' + i + '=' + locals[i] + '\n';
+	}
+
+	for (i in functions) {
+		declarations += functions[i] + '\n';
 	}
 
 	return '' + declarations + body + '\n';
@@ -124,6 +129,12 @@ function parseNode (node, state) {
 		case 'ThrowStatement':
 			return parseThrowStatement(node, state);
 
+		case 'LogicalExpression':
+			return parseLogicalExpression(node, state);
+
+		case 'ArrayExpression':
+			return parseArrayExpression(node, state);
+
 		default:
 			throw TypeError('Unknow node type: ' + node.type);
 	}
@@ -152,11 +163,12 @@ function parseVariableDeclaration (node, state) {
 
 
 function parseVariableDeclarator (node, state, local) {
-	var 
-		id = parseNode(node.id, state),
-		init = parseNode(node.init, state);
+	var id = parseNode(node.id, state),
+		init = node.init;
 
-	return (local? 'local ' : '') + id + '=' + init;
+	if (local) state.locals[id] = 'undefined';
+
+	return init? id + '=' + parseNode(init, state) : '';
 }
 
 
@@ -172,8 +184,11 @@ function parseIdentifier (node) {
 function parseLiteral (node) {
 	var val = node.value;
 
-	// if (typeof val == 'string') return '"' + val + '"';
-	// return node.value; // .raw?
+	if (typeof val == 'string') {
+		val = val.replace('\0', '\\0')
+		// todo Escape all invalid sequences in lua.
+	}
+
 	return JSON.stringify(val);
 }
 
@@ -183,7 +198,7 @@ function parseLiteral (node) {
 function parseCallExpression (node, state) {
 	var callee = parseNode(node.callee, state),
 		arguments = node.arguments,
-		context = node.callee.type == 'MemberExpression'? parseNode(node.callee.object, state) : 'undefined',
+		context = node.callee.type == 'MemberExpression'? parseNode(node.callee.object, state) : 'global',
 		args = [],
 		i, arg;	
 		// TODO? env?
@@ -230,9 +245,10 @@ function parseBinaryExpression (node, state) {
 
 	switch (operator) {
 		case '==': return '__hamlet_equal(' + left + ',' + right + ')';
-		case '!=': return '!__hamlet_equal(' + left + ',' + right + ')';
+		case '!=': return 'not(__hamlet_equal(' + left + ',' + right + '))';
 		case 'in': return '__hamlet_binaryIn(' + left + ',' + right + ')';
 		case 'instanceof': return '__hamlet_instanceof(' + left + ',' + right + ')';
+		case '+': return '__hamlet_add(' + left + ',' + right + ')';
 
 		case '===':
 			operator = '==';
@@ -351,15 +367,26 @@ function parseIfStatement (node, state) {
 
 	if (alternate) alternate = parseNode(alternate, state);
 
-	return 'if ' + test + ' then\n' + consequent + (alternate? 'else\n' + alternate : '') + 'end'
+	return 'if __hamlet_ToBoolean(' + test + ') then\n' + consequent + (alternate? 'else\n' + alternate : '') + 'end'
 }
 
 
 
 
-function parseFunctionDeclaration (node) {
-	var id = parseNode(node.id);
-	return 'local ' + id + '=' + parseFunctionExpression(node);
+function parseFunctionDeclaration (node, state) {
+	var id = parseNode(node.id),
+		functions = state.functions,
+		names = state.functionNames,
+		result = 'local ' + id + '=' + parseFunctionExpression(node);
+
+	if (names.indexOf(id) == -1) {
+		names.push(id);
+		functions.push(result);
+	} else {
+		functions[id] = result;
+	}
+
+	return '';
 }
 
 
@@ -367,13 +394,14 @@ function parseFunctionDeclaration (node) {
 
 function parseFunctionExpression (node) {
 
-	var state = { locals: {} },
+	var state = { locals: {}, functions: [], functionNames: [] },
 		id = node.id? parseNode(node.id) : '',
 		params = node.params.map(parseNode),
 		paramList = params.length? '"' + params.join('","') + '"' : '',
 		// rest ?
 		body = parseNode(node.body, state),
 		locals = state.locals,
+		functions = state.functions,
 		strict = false,			// TODO: Work out strict mode.
 		result, i;
 
@@ -381,9 +409,14 @@ function parseFunctionExpression (node) {
 	params = params.join(', ');
 
 	result = '__hamlet_type_Function:new("' + id + '", {' + paramList + '}, ' + strict + ', function (' + params + ')\n';
+	result += 'local arguments = __hamlet_getArguments()\n';
 
 	for (i in locals) {
 		result += 'local ' + i + '=' + locals[i] + '\n';
+	}
+
+	for (i in functions) {
+		result += functions[i] + '\n';
 	}
 
 	return result + body + 'end)'
@@ -394,10 +427,10 @@ function parseFunctionExpression (node) {
 
 function parseUnaryExpression (node, state) {
 	var body = parseNode(node.argument, state),
-		property;
+		obj, property;
 
 	switch (node.operator) {
-		case '-': return '-(' + body + ')';
+		case '-': return '-__hamlet_ToNumber(' + body + ')';
 		case '+': return '__hamlet_ToNumber(' + body + ')';
 		case '!': return 'not(' + body + ')';
 		case '~': return '__hamlet_bnot(' + body + ')';
@@ -405,12 +438,16 @@ function parseUnaryExpression (node, state) {
 		case 'void': return '__hamlet_void(' + body + ')';
 
 		case 'delete': 
-			if (node.argument.type != 'MemberExpression') throw new TypeError('delete operator should only operate on member expressions');
+			if (node.argument.type == 'MemberExpression') {
+				object = parseNode(node.argument.object);
+				property = parseNode(node.argument.property);
+			} else {
+				object = 'nil';
+				property = parseNode(node.argument);
+			}
 
-			property = parseNode(node.argument.property);
 			if (property.substr(0,1) != '"') property = '"' + property + '"';
-
-			return '__hamlet_delete(' + parseNode(node.argument.object) + ',' + property + ')';
+			return '__hamlet_delete(' + object + ',' + property + ')';
 	}
 
 	throw new ReferenceError('Unknown unary operator: ' + node.operator);
@@ -493,6 +530,36 @@ function parseThrowStatement (node, state) {
 }
 
 
+
+
+function parseLogicalExpression (node, state) {
+	var left = parseNode(node.left, state),
+		right = parseNode(node.right, state),
+		operator = node.operator;
+
+	switch (operator) {
+		case '&&':
+			operator = 'and';
+			break;
+
+		case '||':
+			operator = 'or';
+			break;
+	}
+
+	return '((' + left + ')' + operator + '(' + right + '))';
+}
+
+
+
+
+function parseArrayExpression (node, state) {
+	var items = node.elements.map(function (item) { 
+		return item === null? 'nil' : parseNode(item, state);
+	});
+
+	return '__hamlet_new(Array,' + items.join(',') + ')';
+}
 
 
 

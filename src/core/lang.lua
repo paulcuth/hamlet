@@ -1,11 +1,4 @@
 
--- Operators
-
-getmetatable('').__add = function (a, b)
-	return a..ToString(b)
-end
-
-
 
 
 -- http://www.ecma-international.org/ecma-262/5.1/#sec-11.2.2
@@ -25,8 +18,72 @@ end
 
 
 
-function equal (a, b) 
-	return a == b		--todo!!!!
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-11.9.3
+function equal (x, y) 
+	local typeX, typeY = typeof(x), typeof(y)
+
+	-- 1
+	if typeX == typeY then
+		if x == undefined then
+			-- a
+			return true
+
+		elseif x == null and y == null then
+			-- b
+			return true
+
+		elseif typeX == 'number' then
+			-- c
+			if x ~= x or y ~= y then
+				-- i, ii
+				return false
+			end
+
+			-- iii, iv, v, vi
+			return x == y
+		end
+
+		-- d, e, f
+		return x == y
+	end
+
+	-- 2, 3
+	if (x == null and y == undefined) or (x == undefined and y == null) then
+		return true
+	end
+
+	-- 4
+	if typeX == 'number' and typeY == 'string' then
+		return equal(x, ToNumber(y))
+	end
+
+	-- 5
+	if typeX == 'string' and typeY == 'number' then
+		return equal(ToNumber(x), y)
+	end
+
+	-- 6
+	if typeX == 'boolean' then
+		return equal(ToNumber(x), y)
+	end
+
+	-- 7
+	if typeY == 'boolean' then
+		return equal(x, ToNumber(y))
+	end
+
+	-- 8
+	if (typeX == 'string' or typeX == 'number') and typeY == 'object' and y ~= null then
+		return equal(x, ToPrimitive(y))
+	end
+
+	-- 9
+	if typeX == 'object' and typeX ~= null and (typeY == 'string' or y == 'number') then
+		return equal(ToPrimitive(x), y)
+	end
+
+	-- 10
+	return false
 end
 
 
@@ -128,10 +185,45 @@ end
 
 -- http://www.ecma-international.org/ecma-262/5.1/#sec-11.4.1
 function delete (obj, propertyName)
-	-- 1, 2, 3, 5 NOOP
+	if obj then
+		return ToObject(obj):delete(propertyName)
+	end
 
-	-- 4
-	return ToObject(obj):delete(propertyName)
+	-- If the subject of the delete operator is an identifier
+	-- and the identifier does not refer a var in the scope
+	-- chain, operate on global scope, otherwise return false.
+
+	-- TODO: Review the following for a faster solution.
+
+	local index = 1
+	repeat
+		local varName = debug.getlocal(2, index)
+
+		if varName == propertyName then
+			-- Identifier refers to local
+			debug.setlocal(2, index, nil)
+			return true
+		end
+
+		index = index + 1
+	until varName == nil
+
+	local func = callStack[1]
+	if func ~= nil then
+		repeat
+			local varName = debug.getupvalue(func, index)
+
+			if varName == propertyName then
+				-- Identifier refers to upvalue
+				debug.setupvalue(func, index, nil)
+				return true
+			end
+
+			index = index + 1
+		until varName == nil
+	end
+
+	return global:delete(propertyName)
 end
 
 

@@ -4,5 +4,7 @@ $ERROR = function (message) {
 	$errCount++;
 }
 
+$PRINT = function (message) {}
+
 var $start = Date.now()
 
