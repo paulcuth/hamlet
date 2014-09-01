@@ -6,7 +6,7 @@ var gulp = require('gulp'),
 	concat = require('gulp-concat'),
 	through = require('through'),
 	Buffer = require('buffer').Buffer,
-	hamletParser = require('./parser/parser');
+	hamletParser = require('./src/parser/parser');
 
 
 
@@ -36,27 +36,27 @@ var translate = function () {
 
 gulp.task('build', function () {
 	var files = [
-		'./src/core/init.lua',
-		'./src/core/types/Object.lua',
-		'./src/core/types/Function.lua',
-		'./src/core/abstracts.lua',
-		'./src/core/lang.lua',
-		'./src/core/env/global.lua',
-		'./src/core/env/Object.lua',
-		'./src/core/env/Function.lua',
-		'./src/core/env/Error.lua',
-		'./src/core/env/RangeError.lua',
-		'./src/core/env/ReferenceError.lua',
-		'./src/core/env/TypeError.lua',
-		'./src/core/env/Array.lua',
-		'./src/core/env/Number.lua',
-		'./src/core/env/String.lua',
-		'./src/core/env/Boolean.lua',
-		'./src/core/env/Math.lua',
-		'./src/core/env/Date.lua',
-		'./src/core/env/RegExp.lua',
-		'./src/node/console.lua',
-		'./src/core/cli.lua'
+		'./src/runtime/core/init.lua',
+		'./src/runtime/core/types/Object.lua',
+		'./src/runtime/core/types/Function.lua',
+		'./src/runtime/core/abstracts.lua',
+		'./src/runtime/core/lang.lua',
+		'./src/runtime/core/env/global.lua',
+		'./src/runtime/core/env/Object.lua',
+		'./src/runtime/core/env/Function.lua',
+		'./src/runtime/core/env/Error.lua',
+		'./src/runtime/core/env/RangeError.lua',
+		'./src/runtime/core/env/ReferenceError.lua',
+		'./src/runtime/core/env/TypeError.lua',
+		'./src/runtime/core/env/Array.lua',
+		'./src/runtime/core/env/Number.lua',
+		'./src/runtime/core/env/String.lua',
+		'./src/runtime/core/env/Boolean.lua',
+		'./src/runtime/core/env/Math.lua',
+		'./src/runtime/core/env/Date.lua',
+		'./src/runtime/core/env/RegExp.lua',
+		'./src/runtime/node/console.lua',
+		'./src/runtime/core/cli.lua'
 	];
 
 	return gulp.src(files)
