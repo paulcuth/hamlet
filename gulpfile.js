@@ -54,6 +54,7 @@ gulp.task('build', function () {
 		'./src/core/env/Boolean.lua',
 		'./src/core/env/Math.lua',
 		'./src/core/env/Date.lua',
+		'./src/core/env/RegExp.lua',
 		'./src/node/console.lua',
 		'./src/core/cli.lua'
 	];

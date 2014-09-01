@@ -10,6 +10,8 @@ do
 	-- Properties
 
 	defineProperty(Math, 'E', 0, math.exp(1))
+	defineProperty(Math, 'MAX_VALUE', 0, 1.7976931348623157e308)
+	defineProperty(Math, 'MIN_VALUE', 0, 5e-324)
 
 
 

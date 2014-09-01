@@ -78,10 +78,7 @@ function ToString (val)
 		end
 
 	elseif t == 'object' or t == 'function' then
-		-- local mt = getmetatable(val)
-		-- if mt == Object or mt == Function then
-			return ToString(ToPrimitive(val, 'string'))
-		-- end
+		return ToString(ToPrimitive(val, 'string'))
 	end
 
 	throw(new(TypeError))
@@ -109,10 +106,15 @@ function ToNumber (val)
 
 	elseif t == 'string' then
 		-- MASSIVE TODO
-		if val == '' then 
+		if string.match(val, '^%s?$') then 
 			return 0 
 		end
-		return tonumber(val)
+
+		if val == '-0' then
+			return -0
+		end
+
+		return tonumber(val) or NaN
 	end
 
 	return ToNumber(ToPrimitive(val, 'number'))
@@ -123,20 +125,22 @@ end
 
 -- http://www.ecma-international.org/ecma-262/5.1/#sec-9.9
 function ToObject (val)
-	if val == nil or val == undefined or val == null then
-		throw(new(TypeError))
+	if val == nil or val == undefined then
+		throw(new(TypeError, 'undefined is not an object'))
+	elseif val == null then
+		throw(new(TypeError, 'null is not an object'))
 	end
 
 	local t = typeof(val)
 
 	if t == 'boolean' then
-		return Boolean:new(val)
+		return new(Boolean, val)
 
 	elseif t == 'number' then
-		return Number:new(val)
+		return new(Number, val)
 
 	elseif t == 'string' then
-		return String:new(val)
+		return new(String, val)
 
 	elseif t == 'object' or t == 'function' then
 		return val
@@ -243,6 +247,55 @@ end
 
 
 
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-9.4
+function ToInteger (val)
+	-- 1
+	val = ToNumber(val)
+
+	-- 2
+	if val ~= val--[[NaN]] then
+		return 0
+	end
+
+	-- 3
+	if val == 0 or val == -0 or val == Infinity or val == -Infinity then
+		return val
+	end
+
+	-- 4
+	local abs = math.abs(val)
+	return (val / abs) * math.floor(abs)
+end
+
+
+
+
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-9.5
+function ToInt32 (val)
+	-- 1
+	local number = ToNumber(val)
+
+	-- 2
+	if number ~= number--[[NaN]] or number == 0 or number == Infinity or number == -Infinity then
+		return 0
+	end
+
+	-- 3
+	local abs = math.abs(number)
+	local posInt = (number / abs) * math.floor(abs)
+
+	-- 4
+	local limit = math.pow(2, 32)
+	local int32bit = posInt % limit 
+
+	-- 5
+	return int32bit >= math.pow(2, 31) and int32bit - limit or int32bit
+end
+
+
+
+
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-9.6
 function ToUint32 (val) 
 	-- 1
 	val = ToNumber(val)
@@ -260,6 +313,53 @@ end
 
 
 
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-11.8.5
+function RelationalComparison (x, y, leftFirst)
+	local px, py
+
+	-- 1
+	if leftFirst or leftFirst == nil then
+		px = ToPrimitive(x, 'number')
+		py = ToPrimitive(y, 'number')
+	else
+		-- 2
+		py = ToPrimitive(y, 'number')
+		px = ToPrimitive(x, 'number')
+	end
+
+	-- 3
+	if typeof(px) ~= 'string' or typeof(py) ~= 'string' then
+		-- a, b
+		local nx = ToNumber(px)
+		local ny = ToNumber(py)
+
+		-- c, d
+		if nx ~= nx--[[NaN]] or ny ~= ny--[[NaN]] then
+			return undefined
+		end
+
+		-- e-l
+		return nx < ny
+	end
+
+	-- 4a-f
+	return px < py
+end
+
+
+
+
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-9.10
+function CheckObjectCoercible (obj)
+	if obj == undefined or obj == null or obj == nil then
+		throw(new(TypeError))
+	end
+end
+
+
+
+
+
 -- Custom
 
 
@@ -267,6 +367,7 @@ function isPrimitive(val)
 	local t = type(val)
 	return t ~= 'table' or t == null or t == undefined
 end
+
 
 
 

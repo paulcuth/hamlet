@@ -89,6 +89,36 @@ end
 
 
 
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-11.8.1
+function lessThan (left, right, isLessThan)
+	-- isLessThan set by parser. False if is reversed greater than.
+	-- 1-4 NOOP
+
+	-- 5
+	local r = RelationalComparison(left, right, isLessThan)
+
+	-- 6
+	return r == undefined and false or r
+end
+
+
+
+
+-- http://www.ecma-international.org/ecma-262/5.1/#sec-11.8.3
+function lessThanEqualTo (left, right, isLessThan)
+	-- isLessThan set by parser. False if is reversed greater than.
+	-- 1-4 NOOP
+
+	-- 5
+	local r = RelationalComparison(right, left, not isLessThan)
+
+	-- 6
+	return r ~= undefined and not r
+end
+
+
+
+
 function binaryIn (propertyName, object)
 	if typeof(object) ~= 'object' then
 		return false
@@ -280,22 +310,57 @@ end
 
 
 do
-	local errors = setmetatable({}, { __mode = 'v' })
+	local errors = setmetatable({}, { __mode = 'k' })
 
-	function throw (err) 
+	function throw (err)
 		collectgarbage()
 
-		local id = err:get('name')..':'..err:get('message')..':'..tostring(os.clock() * 1000000)
+		local id = tostring(err)..':'..tostring(os.clock() * 1000000)
 		errors[id] = err
 
 		error(id, 2)
 	end
 
 	function getError (id)
-		local _, _, debug, match = string.find(id, '(.*): (%a+:.*:%d+)$')
+		local _, _, debug, match = string.find(id, '(.*:%d+): (.*:%d+)$')
 		local err = errors[match]
 
-		err:put('message', err:get('message')..'\n\ton line '..debug)
+		-- err:put('message', tostring(err:get('message'))..'\n\ton line '..debug)
 		return err
 	end
+end
+
+
+
+
+function leftShift (left, right)
+	left = ToNumber(left)
+	right = ToNumber(right)
+	return ToInt32(bit.lshift(left, right))
+end
+
+
+
+
+function rightShiftSigned (left, right)
+	left = ToNumber(left)
+	right = ToNumber(right)
+	return ToInt32(bit.arshift(left, right))
+end
+
+
+
+
+function rightShiftUnsigned (left, right)
+	left = ToNumber(left)
+	right = ToNumber(right)
+	return ToInt32(bit.rshift(left, right))
+end
+
+
+
+
+function bitwiseNot (val)
+	val = ToNumber(val)
+	return ToInt32(bit.bnot(val))
 end

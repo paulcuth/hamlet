@@ -27,10 +27,12 @@ function parseProgram (node) {
 		locals = state.locals,
 		functions = state.functions,
 		declarations = '',
-		i;
+		i, value;
 
 	for (i in locals) {
-		declarations += 'local ' + i + '=' + locals[i] + '\n';
+		value = locals[i];
+		if (value == 'undefined') value = 'global:get("' + i + '")';
+		declarations += 'local ' + i + '=' + value + '\n';
 	}
 
 	for (i in functions) {
@@ -135,8 +137,11 @@ function parseNode (node, state) {
 		case 'ArrayExpression':
 			return parseArrayExpression(node, state);
 
+		case 'WithStatement':
+			return parseWithStatement(node, state);
+
 		default:
-			throw TypeError('Unknow node type: ' + node.type);
+			throw TypeError('Unknown node type: ' + node.type);
 	}
 }
 
@@ -175,7 +180,7 @@ function parseVariableDeclarator (node, state, local) {
 
 
 function parseIdentifier (node) {
-	return node.name.replace('$', '_dollar_');	// todo: remove
+	return node.name.replace('$', '_dollar_');
 }
 
 
@@ -187,9 +192,18 @@ function parseLiteral (node) {
 	if (typeof val == 'string') {
 		val = val.replace('\0', '\\0')
 		// todo Escape all invalid sequences in lua.
+
+		return JSON.stringify(val);
+	} else if (val instanceof RegExp) {
+		var flags = '';
+		if (val.global) flags += 'g';
+		if (val.ignoreCase) flags += 'i';
+		if (val.multiline) flags += 'm';
+
+		return '__hamlet_new(RegExp("' + val.source + '","' + flags + '"))';
 	}
 
-	return JSON.stringify(val);
+	return '' + val;
 }
 
 
@@ -249,6 +263,13 @@ function parseBinaryExpression (node, state) {
 		case 'in': return '__hamlet_binaryIn(' + left + ',' + right + ')';
 		case 'instanceof': return '__hamlet_instanceof(' + left + ',' + right + ')';
 		case '+': return '__hamlet_add(' + left + ',' + right + ')';
+		case '<': return '__hamlet_lessThan(' + left + ',' + right + ', true)';
+		case '>': return '__hamlet_lessThan(' + right + ',' + left + ', false)';
+		case '<=': return '__hamlet_lessThanEqualTo(' + left + ',' + right + ', true)';
+		case '>=': return '__hamlet_lessThanEqualTo(' + right + ',' + left + ', false)';
+		case '<<': return '__hamlet_leftShift(' + left + ',' + right + ')';
+		case '>>': return '__hamlet_rightShiftSigned(' + left + ',' + right + ')';
+		case '>>>': return '__hamlet_rightShiftUnsigned(' + left + ',' + right + ')';
 
 		case '===':
 			operator = '==';
@@ -367,7 +388,7 @@ function parseIfStatement (node, state) {
 
 	if (alternate) alternate = parseNode(alternate, state);
 
-	return 'if __hamlet_ToBoolean(' + test + ') then\n' + consequent + (alternate? 'else\n' + alternate : '') + 'end'
+	return 'if __hamlet_ToBoolean(' + test + ') then\n' + consequent + (alternate? 'else\n' + alternate : '') + '\nend'
 }
 
 
@@ -432,8 +453,8 @@ function parseUnaryExpression (node, state) {
 	switch (node.operator) {
 		case '-': return '-__hamlet_ToNumber(' + body + ')';
 		case '+': return '__hamlet_ToNumber(' + body + ')';
-		case '!': return 'not(' + body + ')';
-		case '~': return '__hamlet_bnot(' + body + ')';
+		case '!': return 'not __hamlet_ToBoolean(' + body + ')';
+		case '~': return '__hamlet_bitwiseNot(' + body + ')';
 		case 'typeof': return '__hamlet_typeof(' + body + ')';
 		case 'void': return '__hamlet_void(' + body + ')';
 
@@ -480,11 +501,20 @@ function parseNewExpression (node, state) {
 
 
 function parseForInStatement (node, state) {
-	var left = parseNode(node.left, state),
+
+	var left,
 		right = parseNode(node.right, state),
 		body = parseNode(node.body, state),
 		each = node.each;			// TODO
 
+	if (node.left.type == 'VariableDeclaration') {
+		var dec0 = node.left.declarations[0];
+		if (dec0.type == 'VariableDeclarator') {
+			left = dec0.id.name;
+		}
+	}
+
+	if (!left) left = parseNode(node.left, state);
 	return 'for ' + left + ' in __hamlet_forIn(' + right + ') do\n' + body + '\nend';
 }
 
@@ -559,6 +589,13 @@ function parseArrayExpression (node, state) {
 	});
 
 	return '__hamlet_new(Array,' + items.join(',') + ')';
+}
+
+
+
+
+function parseWithStatement (node, state) {
+	throw new Error('With statements are currently not supported.')
 }
 
 

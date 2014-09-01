@@ -10,21 +10,29 @@ do
 
 	undefined = setmetatable({}, {
 		__index = function (t, key) 
-			throw(new(ReferenceError, 'Variable is not defined. Can\'t reference property "'..key..'" of undefined.'))
+			throw(new(TypeError, 'Variable is not defined. Trying to reference property of undefined.'))
 		end,
 
 		__newindex = function (t, key) 
-			throw(new(ReferenceError, 'Variable is not defined. Can\'t set property "'..key..'" of undefined.'))
+			throw(new(TypeError, 'Variable is not defined. Trying to set property of undefined.'))
+		end,
+
+		__call = function (t, ...) 
+			throw(new(TypeError, 'undefined is not a function.'))
 		end
 	})
 
 	null = setmetatable({}, {
 		__index = function (t, key) 
-			throw(new(TypeError, 'Variable is null. Can\'t reference property "'..key..'" of null.'))
+			throw(new(TypeError, 'Variable is null. Trying to reference property of null.'))
 		end,
 
 		__index = function (t, key) 
-			throw(new(TypeError, 'Variable is null. Can\'t set property "'..key..'" of null.'))
+			throw(new(TypeError, 'Variable is null. Trying to set property of null.'))
+		end,
+
+		__call = function (t, ...) 
+			throw(new(TypeError, 'null is not a function.'))
 		end
 	})
 
@@ -51,7 +59,18 @@ do
 
 		local t = typeof(val)
 
-		if t == 'number' or t == 'boolean' then
+		if t == 'number' then
+			if val == Infinity then
+				return 'Infinity'
+			elseif val == -Infinity then
+				return '-Infinity'
+			elseif val ~= val then
+				return 'NaN'
+			end
+
+			return tostring(val)
+
+		elseif t == 'boolean' then
 			return tostring(val)
 
 		elseif t == 'string' then
@@ -128,11 +147,17 @@ do
 			__hamlet_binaryIn = binaryIn,
 			__hamlet_equal = equal,
 			__hamlet_updateOp = updateOp,
+			__hamlet_lessThan = lessThan,
+			__hamlet_lessThanEqualTo = lessThanEqualTo,
 			__hamlet_instanceof = instanceof,
 			__hamlet_pcall = pcall,
 			__hamlet_throw = throw,
 			__hamlet_getError = getError,
-			__hamlet_getArguments = getCurrentArguments
+			__hamlet_getArguments = getCurrentArguments,
+			__hamlet_bitwiseNot = bitwiseNot,
+			__hamlet_leftShift = leftShift,
+			__hamlet_rightShiftSigned = rightShiftSigned,
+			__hamlet_rightShiftUnsigned = rightShiftUnsigned
 		}
 
 		setmetatable(env, {
@@ -151,10 +176,12 @@ do
 		local success, errId = pcall(func)
 		if not success then
 			local err = getError(errId)
+
 			if err == nil then
 				error(errId)
 			end
-			error(err:get('toString')(err))
+
+			error(ToString(err))
 		end
 	end
 

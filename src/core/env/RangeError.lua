@@ -10,6 +10,7 @@ do
 
 	--[[ Prototype ]]
 
+
 	local prototype = new(Error)
 	
 	defineProperty(RangeError, 'prototype', 0, prototype)

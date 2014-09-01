@@ -12,8 +12,12 @@ do
 
 
 
-	local Object = Function:new('Object', {}, function (this)
-		return ObjectType:new()
+	local Object = Function:new('Object', {}, function (this, val)
+		if val == nil or val == undefined or val == null then
+			return ObjectType:new()
+		end
+
+		return ToObject(val)
 	end)
 
 
